@@ -1,29 +1,8 @@
 use reqwest::ClientBuilder;
-use serde::Deserialize;
 
-
-#[derive(Deserialize, Debug)]
-struct TypeInfo {
-    name: String,
-    url: String,
-}
-
-
-#[derive(Deserialize, Debug)]
-struct PokemonType {
-    slot: u8,
-    #[serde(rename = "type")]
-    type_info: TypeInfo,
-}
-
-#[derive(Deserialize, Debug)]
-struct Pokemon {
-    name: String,
-    height: u32,
-    weight: u32,
-    base_experience: u32,
-    types: Vec<PokemonType>,
-}
+mod poke;
+mod sprite;
+use poke::Pokemon;
 
 #[tokio::main]
 async fn main() {
