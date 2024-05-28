@@ -109,8 +109,42 @@ pub struct Pokemon {
     weight: u32,
 }
 
+
 impl fmt::Display for Pokemon {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "formatted {}", "arguments")
+        write!(f, "{}\nID : {}\n", self.name, self.id)?;
+
+        write!(f, "- Type(s) : \n")?;
+        for t in &self.types {
+            write!(f, "{}\n", t.type_info.name)?;
+        }
+
+        write!(f, "- Stats : \n")?;
+        for s in &self.stats {
+            write!(f, "{} {}\n", s.stat.name, s.base_stat)?;
+        }
+
+        write!(f, "- Abilities : \n")?;
+        for a in &self.abilities {
+            if a.is_hidden {
+                write!(f, "{} (hidden)\n", a.ability.name)?;
+            }
+            else {
+                write!(f, "{}\n", a.ability.name)?;
+            }
+        }
+
+        write!(f, "- Moves : \n")?;
+        for m in &self.moves {
+            write!(f, "{}\n", m.move_data.name)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl Into<String> for Pokemon {
+    fn into(self) -> String {
+        self.name
     }
 }
