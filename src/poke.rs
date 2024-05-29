@@ -1,13 +1,13 @@
 use core::fmt;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use crate::sprite::Sprites;
 
 // Structs holding pokemon data 
 
 // Data
 // Basic data that every object have (name + url)
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Data {
     name: String,
     url: String,
@@ -70,16 +70,16 @@ struct PastType {
 }
 
 // Stat
-#[derive(Deserialize, Debug)]
-struct Stat {
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Stat {
     base_stat: u32,
     effort: u32,
     stat: Data,
 }
 
 // Type
-#[derive(Deserialize, Debug)]
-struct PokemonType {
+#[derive(Serialize, Deserialize, Debug)]
+pub struct PokemonType {
     slot: u8,
     #[serde(rename = "type")]
     type_info: Data,
@@ -107,6 +107,14 @@ pub struct Pokemon {
     stats: Vec<Stat>,
     types: Vec<PokemonType>,
     weight: u32,
+}
+
+pub struct DbPoke {
+    pub id: u32,
+    pub name: String,
+    pub types: Vec<PokemonType>,
+    pub base_experience: u32,
+    pub stats: Vec<Stat>,
 }
 
 
@@ -146,5 +154,17 @@ impl fmt::Display for Pokemon {
 impl Into<String> for Pokemon {
     fn into(self) -> String {
         self.name
+    }
+}
+
+impl Into<DbPoke> for Pokemon {
+    fn into(self) -> DbPoke {
+        DbPoke {
+            id: self.id,
+            name: self.name,
+            types: self.types,
+            base_experience: self.base_experience,
+            stats: self.stats,
+        }
     }
 }
