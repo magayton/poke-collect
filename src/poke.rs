@@ -110,10 +110,10 @@ pub struct Pokemon {
 }
 
 pub struct DbPoke {
-    pub id: u32,
+    pub id: i64,
     pub name: String,
     pub types: Vec<PokemonType>,
-    pub base_experience: u32,
+    pub base_experience: i64,
     pub stats: Vec<Stat>,
 }
 
@@ -160,11 +160,29 @@ impl Into<String> for Pokemon {
 impl Into<DbPoke> for Pokemon {
     fn into(self) -> DbPoke {
         DbPoke {
-            id: self.id,
+            id: self.id as i64,
             name: self.name,
             types: self.types,
-            base_experience: self.base_experience,
+            base_experience: self.base_experience as i64,
             stats: self.stats,
         }
+    }
+}
+
+impl fmt::Display for DbPoke {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}\nID : {},\nbase exerperience: {}\n", self.name, self.id, self.base_experience)?;
+
+        write!(f, "- Type(s) : \n")?;
+        for t in &self.types {
+            write!(f, "{}\n", t.type_info.name)?;
+        }
+
+        write!(f, "- Stats : \n")?;
+        for s in &self.stats {
+            write!(f, "{} {}\n", s.stat.name, s.base_stat)?;
+        }
+
+        Ok(())
     }
 }
