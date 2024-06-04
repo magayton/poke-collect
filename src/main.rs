@@ -1,4 +1,7 @@
-use clap::{arg, command, ArgMatches, Command};
+use std::env;
+
+use clap::{arg, command, Arg, ArgMatches, Command};
+use dotenv::dotenv;
 use reqwest::{Client, ClientBuilder};
 use serde_json::{from_value, Value};
 use sqlx::{migrate, Pool, Postgres, Row};
@@ -12,15 +15,16 @@ use poke::{DbPoke, Pokemon, PokemonType, Stat};
 #[tokio::main]
 async fn main() {
 
+    // Init dotenv
+    dotenv().ok();
+
     // Setup reqwest client for API queries
     let client = ClientBuilder::new()
         .connect_timeout(std::time::Duration::from_secs(10))
         .build().unwrap_or_default();
 
 
-    // TODO : ENV file
-    // docker run -e POSTGRES_PASSWORD=mysecretpassword -e POSTGRES_USER=dbuser -e POSTGRES_DB=pokestore  -p 5432:5432 postgres
-    let db_url = "postgres://dbuser:mysecretpassword@localhost:5433/pokestore";
+    let db_url = env::var("DB_URL").unwrap();
     let db_pool = sqlx::postgres::PgPool::connect(&db_url).await.unwrap();
     migrate!("./migrations").run(&db_pool).await.unwrap();
 
@@ -52,6 +56,15 @@ async fn main() {
         .arg(
             arg!(<GEN> "specify gen").required(false)
     ))
+    .subcommand(
+        Command::new("multi-catch")
+        .about("Catch multiple pokemon")
+        .arg(
+            Arg::new("names")
+            .num_args(1..)
+            .required(true)
+        )
+    )
     .get_matches();
 
     match cli_result.subcommand() {
@@ -84,7 +97,6 @@ async fn catch_pokemon(client: Client, name: &String, db_co: &Pool<Postgres>) {
     }
 }
 
-// No async for the following => Retrieved from database (TODO)
 async fn info_pokemon(name: &String, db_co: &Pool<Postgres>) {
     let db_select = "SELECT * FROM poke WHERE poke_name=$1";
     let row = sqlx::query(&db_select).bind(name).fetch_one(db_co).await.unwrap();
@@ -106,6 +118,7 @@ async fn info_pokemon(name: &String, db_co: &Pool<Postgres>) {
     println!("{}", pokemon);
 }
 
+// 
 fn shiny_pokemon(name: String, db_co: &Pool<Postgres>) {
     
 }
