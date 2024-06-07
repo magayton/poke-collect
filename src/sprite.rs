@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 // Struct holding pokemon data for sprites
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 pub struct Sprites {
     back_default: Option<String>,
     back_female: Option<String>,
@@ -16,7 +16,7 @@ pub struct Sprites {
     versions: Option<Versions>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct Other {
     dream_world: Option<DreamWorld>,
     home: Option<Home>,
@@ -25,13 +25,13 @@ struct Other {
     showdown: Option<Showdown>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct DreamWorld {
     front_default: Option<String>,
     front_female: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct Home {
     front_default: Option<String>,
     front_female: Option<String>,
@@ -39,13 +39,13 @@ struct Home {
     front_shiny_female: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct OfficialArtwork {
     front_default: Option<String>,
     front_shiny: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct Showdown {
     back_default: Option<String>,
     back_female: Option<String>,
@@ -57,7 +57,7 @@ struct Showdown {
     front_shiny_female: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct Versions {
     #[serde(rename = "generation-i")]
     generation_i: Option<GenerationI>,
@@ -77,14 +77,14 @@ struct Versions {
     generation_viii: Option<GenerationVIII>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct GenerationI {
     #[serde(rename = "red-blue")]
     red_blue: Option<RedBlue>,
     yellow: Option<Yellow>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct RedBlue {
     back_default: Option<String>,
     back_gray: Option<String>,
@@ -94,7 +94,7 @@ struct RedBlue {
     front_transparent: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct Yellow {
     back_default: Option<String>,
     back_gray: Option<String>,
@@ -104,14 +104,14 @@ struct Yellow {
     front_transparent: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct GenerationII {
     crystal: Option<Crystal>,
     gold: Option<Gold>,
     silver: Option<Silver>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct Crystal {
     back_default: Option<String>,
     back_shiny: Option<String>,
@@ -123,7 +123,7 @@ struct Crystal {
     front_transparent: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct Gold {
     back_default: Option<String>,
     back_shiny: Option<String>,
@@ -132,7 +132,7 @@ struct Gold {
     front_transparent: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct Silver {
     back_default: Option<String>,
     back_shiny: Option<String>,
@@ -141,7 +141,7 @@ struct Silver {
     front_transparent: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct GenerationIII {
     emerald: Option<Emerald>,
     #[serde(rename = "firered-leafgreen")]
@@ -150,13 +150,13 @@ struct GenerationIII {
     ruby_sapphire: Option<RubySapphire>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct Emerald {
     front_default: Option<String>,
     front_shiny: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct FireRedLeafGreen {
     back_default: Option<String>,
     back_shiny: Option<String>,
@@ -164,7 +164,7 @@ struct FireRedLeafGreen {
     front_shiny: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct RubySapphire {
     back_default: Option<String>,
     back_shiny: Option<String>,
@@ -172,7 +172,7 @@ struct RubySapphire {
     front_shiny: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct GenerationIV {
     #[serde(rename = "diamond-pearl")]
     diamond_pearl: Option<DiamondPearl>,
@@ -181,7 +181,7 @@ struct GenerationIV {
     platinum: Option<Platinum>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct DiamondPearl {
     back_default: Option<String>,
     back_female: Option<String>,
@@ -193,7 +193,7 @@ struct DiamondPearl {
     front_shiny_female: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct HeartGoldSoulSilver {
     back_default: Option<String>,
     back_female: Option<String>,
@@ -205,7 +205,7 @@ struct HeartGoldSoulSilver {
     front_shiny_female: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct Platinum {
     back_default: Option<String>,
     back_female: Option<String>,
@@ -217,13 +217,13 @@ struct Platinum {
     front_shiny_female: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct GenerationV {
     #[serde(rename = "black-white")]
     black_white: Option<BlackWhite>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct BlackWhite {
     animated: Option<Animated>,
     back_default: Option<String>,
@@ -236,7 +236,7 @@ struct BlackWhite {
     front_shiny_female: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct Animated {
     back_default: Option<String>,
     back_female: Option<String>,
@@ -248,7 +248,7 @@ struct Animated {
     front_shiny_female: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct GenerationVI {
     #[serde(rename = "omegaruby-alphasapphire")]
     omegaruby_alphasapphire: Option<OmegaRubyAlphaSapphire>,
@@ -256,7 +256,7 @@ struct GenerationVI {
     x_y: Option<XY>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct OmegaRubyAlphaSapphire {
     front_default: Option<String>,
     front_female: Option<String>,
@@ -264,7 +264,7 @@ struct OmegaRubyAlphaSapphire {
     front_shiny_female: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct XY {
     front_default: Option<String>,
     front_female: Option<String>,
@@ -272,20 +272,20 @@ struct XY {
     front_shiny_female: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct GenerationVII {
     icons: Option<Icons>,
     #[serde(rename = "ultra-sun-ultra-moon")]
     ultra_sun_ultra_moon: Option<UltraSunUltraMoon>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct Icons {
     front_default: Option<String>,
     front_female: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct UltraSunUltraMoon {
     front_default: Option<String>,
     front_female: Option<String>,
@@ -293,7 +293,7 @@ struct UltraSunUltraMoon {
     front_shiny_female: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct GenerationVIII {
     icons: Option<Icons>,
 }

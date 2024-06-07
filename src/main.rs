@@ -112,11 +112,7 @@ async fn main() {
             .await
         }
         Some(("collection", sub_matches)) => {
-            collection_pokemon(
-                sub_matches.get_one::<usize>("GEN"),
-                &db_pool,
-            )
-            .await
+            collection_pokemon(sub_matches.get_one::<usize>("GEN"), &db_pool).await
         }
         Some(("multi-catch", sub_matches)) => {
             if let Some(names) = sub_matches.get_many::<String>("names") {
@@ -146,7 +142,7 @@ async fn catch_pokemon(client: Client, name: &String, db_co: &Pool<Postgres>) {
         let db_poke: DbPoke = poke.into();
         let stats_json = serde_json::to_string(&db_poke.stats).unwrap();
         let types_json = serde_json::to_string(&db_poke.types).unwrap();
-        sqlx::query(&db_insert)
+        sqlx::query(db_insert)
             .bind(db_poke.id)
             .bind(db_poke.name)
             .bind(types_json)
@@ -162,7 +158,7 @@ async fn catch_pokemon(client: Client, name: &String, db_co: &Pool<Postgres>) {
 
 async fn info_pokemon(name: &String, db_co: &Pool<Postgres>) {
     let db_select = "SELECT * FROM poke WHERE poke_name=$1";
-    let row = sqlx::query(&db_select)
+    let row = sqlx::query(db_select)
         .bind(name)
         .fetch_one(db_co)
         .await
@@ -176,9 +172,9 @@ async fn info_pokemon(name: &String, db_co: &Pool<Postgres>) {
     let pokemon = DbPoke {
         id: row.try_get("poke_id").unwrap(),
         name: row.try_get("poke_name").unwrap(),
-        types: types,
+        types,
         base_experience: row.try_get("poke_base_experience").unwrap(),
-        stats: stats,
+        stats,
         is_shiny: row.try_get("poke_is_shiny").unwrap(),
     };
 
@@ -187,7 +183,7 @@ async fn info_pokemon(name: &String, db_co: &Pool<Postgres>) {
 
 async fn shiny_pokemon(name: &String, difficulty: usize, number: usize, db_co: &Pool<Postgres>) {
     let db_select = "SELECT * FROM poke WHERE poke_name=$1";
-    if sqlx::query(&db_select)
+    if sqlx::query(db_select)
         .bind(name)
         .fetch_one(db_co)
         .await
@@ -231,7 +227,7 @@ async fn shiny_pokemon(name: &String, difficulty: usize, number: usize, db_co: &
             handle.join().unwrap();
         }
         let db_upadte = "UPDATE poke SET poke_is_shiny=true where poke_name=$1";
-        sqlx::query(&db_upadte)
+        sqlx::query(db_upadte)
             .bind(name)
             .execute(db_co)
             .await
@@ -244,28 +240,58 @@ async fn shiny_pokemon(name: &String, difficulty: usize, number: usize, db_co: &
 async fn collection_pokemon(gen: Option<&usize>, db_co: &Pool<Postgres>) {
     if let Some(gen) = gen {
         let start;
-        let end;
-        match gen {
-            1 => {start = GEN1.start; end = GEN1.end},
-            2 => {start = GEN2.start; end = GEN2.end},
-            3 => {start = GEN3.start; end = GEN3.end},
-            4 => {start = GEN4.start; end = GEN4.end},
-            5 => {start = GEN5.start; end = GEN5.end},
-            6 => {start = GEN6.start; end = GEN6.end},
-            7 => {start = GEN7.start; end = GEN7.end},
-            8 => {start = GEN8.start; end = GEN8.end},
-            9 => {start = GEN9.start; end = GEN9.end},
+        let end = match gen {
+            1 => {
+                start = GEN1.start;
+                GEN1.end
+            }
+            2 => {
+                start = GEN2.start;
+                GEN2.end
+            }
+            3 => {
+                start = GEN3.start;
+                GEN3.end
+            }
+            4 => {
+                start = GEN4.start;
+                GEN4.end
+            }
+            5 => {
+                start = GEN5.start;
+                GEN5.end
+            }
+            6 => {
+                start = GEN6.start;
+                GEN6.end
+            }
+            7 => {
+                start = GEN7.start;
+                GEN7.end
+            }
+            8 => {
+                start = GEN8.start;
+                GEN8.end
+            }
+            9 => {
+                start = GEN9.start;
+                GEN9.end
+            }
             _ => unreachable!(),
-        }
+        };
 
         let db_select = "SELECT poke_name FROM poke WHERE poke_id BETWEEN $1 AND $2";
-        let rows = sqlx::query(&db_select).bind(start).bind(end).fetch_all(db_co).await.unwrap();
+        let rows = sqlx::query(db_select)
+            .bind(start)
+            .bind(end)
+            .fetch_all(db_co)
+            .await
+            .unwrap();
         rows.iter()
             .for_each(|row| println!("{}", row.try_get::<String, &str>("poke_name").unwrap()));
-        
     } else {
         let db_select = "SELECT * FROM poke";
-        let rows = sqlx::query(&db_select).fetch_all(db_co).await.unwrap();
+        let rows = sqlx::query(db_select).fetch_all(db_co).await.unwrap();
 
         rows.iter()
             .for_each(|row| println!("{}", row.try_get::<String, &str>("poke_name").unwrap()));
@@ -303,7 +329,7 @@ fn parse_difficulty_and_number(input: &str) -> Result<usize, String> {
     if num > 0 && num < 10 {
         Ok(num)
     } else {
-        Err(format!("Difficulty and number must be between 1 and 9"))
+        Err("Difficulty and number must be between 1 and 9".to_string())
     }
 }
 
@@ -313,6 +339,6 @@ fn parse_generation(input: &str) -> Result<usize, String> {
     if num > 0 && num <= 9 {
         Ok(num)
     } else {
-        Err(format!("Generation must be between 1 and 9"))
+        Err("Generation must be between 1 and 9".to_string())
     }
 }

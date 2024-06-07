@@ -7,14 +7,14 @@ use serde::{Deserialize, Serialize};
 
 // Data
 // Basic data that every object have (name + url)
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 struct Data {
     name: String,
     url: String,
 }
 
 // Abilities
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct Ability {
     ability: Data,
     is_hidden: bool,
@@ -22,40 +22,40 @@ struct Ability {
 }
 
 // Cries
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct Cries {
     latest: String,
     legacy: String,
 }
 
 // Game Indice
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct GameIndice {
     game_index: u32,
     version: Data,
 }
 
 // Item
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct Item {
     item: Data,
     version_details: Vec<VersionDetails>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct VersionDetails {
     rarity: u32,
     version: Data,
 }
 
 // Move
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct Move {
     #[serde(rename = "move")]
     move_data: Data,
     version_group_details: Vec<VersionGroupDetails>,
 }
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct VersionGroupDetails {
     level_learned_at: u8,
     move_learn_method: Data,
@@ -63,14 +63,14 @@ struct VersionGroupDetails {
 }
 
 // Past Type
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct PastType {
     generation: Data,
     types: PokemonType,
 }
 
 // Stat
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 pub struct Stat {
     base_stat: u32,
     effort: u32,
@@ -78,14 +78,14 @@ pub struct Stat {
 }
 
 // Type
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 pub struct PokemonType {
     slot: u8,
     #[serde(rename = "type")]
     type_info: Data,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 pub struct Pokemon {
     abilities: Vec<Ability>,
     base_experience: u32,
@@ -120,50 +120,50 @@ pub struct DbPoke {
 
 impl fmt::Display for Pokemon {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}\nID : {}\n", self.name, self.id)?;
+        writeln!(f, "{}\nID : {}\n", self.name, self.id)?;
 
-        write!(f, "- Type(s) : \n")?;
+        writeln!(f, "- Type(s) : ")?;
         for t in &self.types {
-            write!(f, "{}\n", t.type_info.name)?;
+            writeln!(f, "{}", t.type_info.name)?;
         }
 
-        write!(f, "- Stats : \n")?;
+        writeln!(f, "- Stats : ")?;
         for s in &self.stats {
-            write!(f, "{} {}\n", s.stat.name, s.base_stat)?;
+            writeln!(f, "{} {}", s.stat.name, s.base_stat)?;
         }
 
-        write!(f, "- Abilities : \n")?;
+        writeln!(f, "- Abilities : ")?;
         for a in &self.abilities {
             if a.is_hidden {
-                write!(f, "{} (hidden)\n", a.ability.name)?;
+                writeln!(f, "{} (hidden)", a.ability.name)?;
             } else {
-                write!(f, "{}\n", a.ability.name)?;
+                writeln!(f, "{}", a.ability.name)?;
             }
         }
 
-        write!(f, "- Moves : \n")?;
+        writeln!(f, "- Moves : ")?;
         for m in &self.moves {
-            write!(f, "{}\n", m.move_data.name)?;
+            writeln!(f, "{}", m.move_data.name)?;
         }
 
         Ok(())
     }
 }
 
-impl Into<String> for Pokemon {
-    fn into(self) -> String {
-        self.name
+impl From<Pokemon> for String {
+    fn from(val: Pokemon) -> Self {
+        val.name
     }
 }
 
-impl Into<DbPoke> for Pokemon {
-    fn into(self) -> DbPoke {
+impl From<Pokemon> for DbPoke {
+    fn from(val: Pokemon) -> Self {
         DbPoke {
-            id: self.id as i64,
-            name: self.name,
-            types: self.types,
-            base_experience: self.base_experience as i64,
-            stats: self.stats,
+            id: val.id as i64,
+            name: val.name,
+            types: val.types,
+            base_experience: val.base_experience as i64,
+            stats: val.stats,
             is_shiny: false,
         }
     }
@@ -171,23 +171,23 @@ impl Into<DbPoke> for Pokemon {
 
 impl fmt::Display for DbPoke {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
+        writeln!(
             f,
-            "{}\nID : {},\nbase exerperience: {}\n",
+            "{}\nID : {},\nbase exerperience: {}",
             self.name, self.id, self.base_experience
         )?;
 
-        write!(f, "- Type(s) : \n")?;
+        writeln!(f, "- Type(s) : ")?;
         for t in &self.types {
-            write!(f, "{}\n", t.type_info.name)?;
+            writeln!(f, "{}", t.type_info.name)?;
         }
 
-        write!(f, "- Stats : \n")?;
+        writeln!(f, "- Stats : ")?;
         for s in &self.stats {
-            write!(f, "{} {}\n", s.stat.name, s.base_stat)?;
+            writeln!(f, "{} {}", s.stat.name, s.base_stat)?;
         }
 
-        write!(f, "- Shiny : {}\n", self.is_shiny)?;
+        writeln!(f, "- Shiny : {}", self.is_shiny)?;
 
         Ok(())
     }
