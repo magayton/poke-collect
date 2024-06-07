@@ -19,6 +19,16 @@ mod sprite;
 use poke::{DbPoke, Pokemon, PokemonType, Stat};
 use tokio::task;
 
+const GEN1: std::ops::Range<i32> = 1..151;
+const GEN2: std::ops::Range<i32> = 152..251;
+const GEN3: std::ops::Range<i32> = 252..386;
+const GEN4: std::ops::Range<i32> = 387..493;
+const GEN5: std::ops::Range<i32> = 494..649;
+const GEN6: std::ops::Range<i32> = 650..721;
+const GEN7: std::ops::Range<i32> = 722..809;
+const GEN8: std::ops::Range<i32> = 810..905;
+const GEN9: std::ops::Range<i32> = 906..1025;
+
 #[tokio::main]
 async fn main() {
     // Init dotenv
@@ -30,7 +40,7 @@ async fn main() {
         .build()
         .unwrap_or_default();
 
-    // Setup postgres DB 
+    // Setup postgres DB
     let db_url = env::var("DB_URL").unwrap();
     let db_pool = sqlx::postgres::PgPool::connect(&db_url).await.unwrap();
     migrate!("./migrations").run(&db_pool).await.unwrap();
@@ -67,7 +77,11 @@ async fn main() {
         .subcommand(
             Command::new("collection")
                 .about("Show your pokemon collection")
-                .arg(arg!(<GEN> "specify gen").required(false)),
+                .arg(
+                    arg!(<GEN> "specify gen")
+                        .required(false)
+                        .value_parser(parse_generation),
+                ),
         )
         .subcommand(
             Command::new("multi-catch")
@@ -97,10 +111,13 @@ async fn main() {
             )
             .await
         }
-        Some(("collection", sub_matches)) => println!(
-            "Ca veut voir la collection {:?}",
-            sub_matches.get_one::<String>("GEN")
-        ),
+        Some(("collection", sub_matches)) => {
+            collection_pokemon(
+                sub_matches.get_one::<usize>("GEN"),
+                &db_pool,
+            )
+            .await
+        }
         Some(("multi-catch", sub_matches)) => {
             if let Some(names) = sub_matches.get_many::<String>("names") {
                 let names: Vec<String> = names.map(|name| name.to_string()).collect();
@@ -224,7 +241,36 @@ async fn shiny_pokemon(name: &String, difficulty: usize, number: usize, db_co: &
     }
 }
 
-fn collection_pokemon(gen: Option<u8>, db_co: &Pool<Postgres>) {}
+async fn collection_pokemon(gen: Option<&usize>, db_co: &Pool<Postgres>) {
+    if let Some(gen) = gen {
+        let start;
+        let end;
+        match gen {
+            1 => {start = GEN1.start; end = GEN1.end},
+            2 => {start = GEN2.start; end = GEN2.end},
+            3 => {start = GEN3.start; end = GEN3.end},
+            4 => {start = GEN4.start; end = GEN4.end},
+            5 => {start = GEN5.start; end = GEN5.end},
+            6 => {start = GEN6.start; end = GEN6.end},
+            7 => {start = GEN7.start; end = GEN7.end},
+            8 => {start = GEN8.start; end = GEN8.end},
+            9 => {start = GEN9.start; end = GEN9.end},
+            _ => unreachable!(),
+        }
+
+        let db_select = "SELECT poke_name FROM poke WHERE poke_id BETWEEN $1 AND $2";
+        let rows = sqlx::query(&db_select).bind(start).bind(end).fetch_all(db_co).await.unwrap();
+        rows.iter()
+            .for_each(|row| println!("{}", row.try_get::<String, &str>("poke_name").unwrap()));
+        
+    } else {
+        let db_select = "SELECT * FROM poke";
+        let rows = sqlx::query(&db_select).fetch_all(db_co).await.unwrap();
+
+        rows.iter()
+            .for_each(|row| println!("{}", row.try_get::<String, &str>("poke_name").unwrap()));
+    }
+}
 
 async fn multi_catch_pokemon(client: Client, names: Vec<String>, db_co: &Pool<Postgres>) {
     let poke = names.into_iter().map(|name| {
@@ -258,5 +304,15 @@ fn parse_difficulty_and_number(input: &str) -> Result<usize, String> {
         Ok(num)
     } else {
         Err(format!("Difficulty and number must be between 1 and 9"))
+    }
+}
+
+// Different because generation can update
+fn parse_generation(input: &str) -> Result<usize, String> {
+    let num: usize = input.parse().unwrap();
+    if num > 0 && num <= 9 {
+        Ok(num)
+    } else {
+        Err(format!("Generation must be between 1 and 9"))
     }
 }
