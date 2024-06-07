@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-// Struct holding pokemon data for sprites 
+// Struct holding pokemon data for sprites
 
 #[derive(Deserialize, Debug)]
 pub struct Sprites {

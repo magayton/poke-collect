@@ -1,9 +1,9 @@
 use core::fmt;
 
-use serde::{Deserialize, Serialize};
 use crate::sprite::Sprites;
+use serde::{Deserialize, Serialize};
 
-// Structs holding pokemon data 
+// Structs holding pokemon data
 
 // Data
 // Basic data that every object have (name + url)
@@ -35,7 +35,7 @@ struct GameIndice {
     version: Data,
 }
 
-// Item 
+// Item
 #[derive(Deserialize, Debug)]
 struct Item {
     item: Data,
@@ -59,7 +59,7 @@ struct Move {
 struct VersionGroupDetails {
     level_learned_at: u8,
     move_learn_method: Data,
-    version_group: Data,    
+    version_group: Data,
 }
 
 // Past Type
@@ -90,8 +90,8 @@ pub struct Pokemon {
     abilities: Vec<Ability>,
     base_experience: u32,
     cries: Cries,
-    forms:  Vec<Data>, 
-    game_indices:  Vec<GameIndice>,
+    forms: Vec<Data>,
+    game_indices: Vec<GameIndice>,
     height: u32,
     held_items: Option<Vec<Item>>,
     id: u32,
@@ -115,8 +115,8 @@ pub struct DbPoke {
     pub types: Vec<PokemonType>,
     pub base_experience: i64,
     pub stats: Vec<Stat>,
+    pub is_shiny: bool,
 }
-
 
 impl fmt::Display for Pokemon {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -136,8 +136,7 @@ impl fmt::Display for Pokemon {
         for a in &self.abilities {
             if a.is_hidden {
                 write!(f, "{} (hidden)\n", a.ability.name)?;
-            }
-            else {
+            } else {
                 write!(f, "{}\n", a.ability.name)?;
             }
         }
@@ -165,13 +164,18 @@ impl Into<DbPoke> for Pokemon {
             types: self.types,
             base_experience: self.base_experience as i64,
             stats: self.stats,
+            is_shiny: false,
         }
     }
 }
 
 impl fmt::Display for DbPoke {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}\nID : {},\nbase exerperience: {}\n", self.name, self.id, self.base_experience)?;
+        write!(
+            f,
+            "{}\nID : {},\nbase exerperience: {}\n",
+            self.name, self.id, self.base_experience
+        )?;
 
         write!(f, "- Type(s) : \n")?;
         for t in &self.types {
@@ -182,6 +186,8 @@ impl fmt::Display for DbPoke {
         for s in &self.stats {
             write!(f, "{} {}\n", s.stat.name, s.base_stat)?;
         }
+
+        write!(f, "- Shiny : {}\n", self.is_shiny)?;
 
         Ok(())
     }
