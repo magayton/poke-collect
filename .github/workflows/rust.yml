@@ -1,22 +1,98 @@
-name: Rust
+name: Build and Run
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
   pull_request:
-    branches: [ "main" ]
-
-env:
-  CARGO_TERM_COLOR: always
+    branches:
+      - main
 
 jobs:
   build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        run: rustup default stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry
+          restore-keys: |
+            ${{ runner.os }}-cargo-registry
+
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/index
+          key: ${{ runner.os }}-cargo-index
+          restore-keys: |
+            ${{ runner.os }}-cargo-index
+
+      - name: Cache cargo build
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-build
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Run tests
+        run: cargo test
+
+      - name: Create artifact
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: poke-collect-ubuntu
+          path: target/release
+
+  run:
+    needs: build
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: poke-collect-ubuntu
+          path: target/release
+
+      - name: Set up Docker Compose
+        run: |
+          docker-compose up -d
+          docker ps -a
+
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          until docker exec pokestore-db pg_isready -U $POSTGRES_USER; do
+            echo "Waiting for postgres container..."
+            sleep 2
+          done
+
+      - name: Run catch command
+        env:
+          DATABASE_URL: postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:$PG_PORT/$POSTGRES_DB
+        run: target/release/poke-collect catch pikachu
