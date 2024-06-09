@@ -106,6 +106,9 @@ jobs:
           echo "Postgres failed to start in time" >&2
           exit 1
 
+      - name: Give execution rights to the binary
+        run: chmod +x target/release/poke-collect
+
       - name: Run catch command
         env:
           DATABASE_URL: postgres://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:${{ secrets.PG_PORT }}/${{ secrets.POSTGRES_DB }}
