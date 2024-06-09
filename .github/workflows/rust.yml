@@ -84,15 +84,29 @@ jobs:
         run: |
           docker-compose up -d
           docker ps -a
+        env:
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          PG_PORT: ${{ secrets.PG_PORT }}
 
       - name: Wait for PostgreSQL to be ready
+        timeout-minutes: 1
         run: |
-          until docker exec pokestore-db pg_isready -U $POSTGRES_USER; do
-            echo "Waiting for postgres container..."
-            sleep 2
+          end=$((SECONDS+20))
+          while [ $SECONDS -lt $end ]; do
+            if docker exec pokestore-db pg_isready -U ${{ secrets.POSTGRES_USER }}; then
+              echo "Postgres is ready!"
+              exit 0
+            else
+              echo "Waiting for postgres container..."
+              sleep 2
+            fi
           done
+          echo "Postgres failed to start in time" >&2
+          exit 1
 
       - name: Run catch command
         env:
-          DATABASE_URL: postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:$PG_PORT/$POSTGRES_DB
+          DATABASE_URL: postgres://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:${{ secrets.PG_PORT }}/${{ secrets.POSTGRES_DB }}
         run: target/release/poke-collect catch pikachu
