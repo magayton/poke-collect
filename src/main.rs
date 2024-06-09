@@ -312,6 +312,8 @@ async fn multi_catch_pokemon(client: Client, names: Vec<String>, db_co: &Pool<Po
     }
 }
 
+
+// Shiny imitate "blockchain mining" => Leading 0 (or other number) to find in a hash
 fn generate_hash(input: u64) -> String {
     let mut hasher = Sha256::new();
     hasher.update(input.to_string());
@@ -323,6 +325,9 @@ fn is_shiny(hash: &str, difficulty: &usize, number: usize) -> bool {
     let number = format!("{}", number);
     hash.starts_with(&number.repeat(*difficulty))
 }
+
+
+// CLI parsers 
 
 fn parse_difficulty_and_number(input: &str) -> Result<usize, String> {
     let num: usize = input.parse().unwrap();
