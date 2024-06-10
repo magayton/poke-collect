@@ -53,11 +53,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-build
 
-      - name: Build
-        run: cargo build --release
-
-      - name: Run tests
-        run: cargo test
+      - name: Run tests on Ubuntu
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          docker-compose up -d
+          sleep 5
+          cargo test
+        env:
+          POSTGRES_USER_TEST: ${{ secrets.POSTGRES_USER_TEST }}
+          POSTGRES_PASSWORD_TEST: ${{ secrets.POSTGRES_PASSWORD_TEST }}
+          POSTGRES_DB_TEST: ${{ secrets.POSTGRES_DB_TEST }}
+          PG_PORT_TEST: ${{ secrets.PG_PORT_TEST }}
+          DATABASE_URL_TEST: "postgres://${{ secrets.POSTGRES_USER_TEST }}:${{ secrets.POSTGRES_PASSWORD_TEST }}@localhost:${{ secrets.PG_PORT_TEST }}/${{ secrets.POSTGRES_DB_TEST }}"
 
       - name: Create artifact
         if: matrix.os == 'ubuntu-latest'
@@ -80,36 +87,17 @@ jobs:
           name: poke-collect-ubuntu
           path: target/release
 
-      - name: Set up Docker Compose
+      - name: Give execution rights to the binary
+        run: chmod +x target/release/poke-collect
+
+      - name: Run catch command
         run: |
           docker-compose up -d
-          docker ps -a
+          sleep 5
+          target/release/poke-collect catch pikachu
         env:
           POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
           PG_PORT: ${{ secrets.PG_PORT }}
-
-      - name: Wait for PostgreSQL to be ready
-        timeout-minutes: 1
-        run: |
-          end=$((SECONDS+20))
-          while [ $SECONDS -lt $end ]; do
-            if docker exec pokestore-db pg_isready -U ${{ secrets.POSTGRES_USER }}; then
-              echo "Postgres is ready!"
-              exit 0
-            else
-              echo "Waiting for postgres container..."
-              sleep 2
-            fi
-          done
-          echo "Postgres failed to start in time" >&2
-          exit 1
-
-      - name: Give execution rights to the binary
-        run: chmod +x target/release/poke-collect
-
-      - name: Run catch command
-        env:
-          DATABASE_URL: postgres://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:${{ secrets.PG_PORT }}/${{ secrets.POSTGRES_DB }}
-        run: target/release/poke-collect catch pikachu
+          DATABASE_URL: "postgres://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:${{ secrets.PG_PORT }}/${{ secrets.POSTGRES_DB }}"
