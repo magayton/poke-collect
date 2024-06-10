@@ -1,5 +1,6 @@
 # Poke collect
-Poke collect is a CLI program I created to deepen my knowledge of Rust's ecosystem and features.
+Poke collect is a CLI program I created to deepen my knowledge of Rust's ecosystem and features.  
+**.env is here on purpose just to show the whole project** 
 
 ## Features
 Poke collect includes the following features : 
