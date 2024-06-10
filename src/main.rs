@@ -1,3 +1,5 @@
+#![allow(dead_code, unused_variables)]
+
 use std::{
     env,
     sync::{
@@ -312,7 +314,6 @@ async fn multi_catch_pokemon(client: Client, names: Vec<String>, db_co: &Pool<Po
     }
 }
 
-
 // Shiny imitate "blockchain mining" => Leading 0 (or other number) to find in a hash
 fn generate_hash(input: u64) -> String {
     let mut hasher = Sha256::new();
@@ -326,8 +327,7 @@ fn is_shiny(hash: &str, difficulty: &usize, number: usize) -> bool {
     hash.starts_with(&number.repeat(*difficulty))
 }
 
-
-// CLI parsers 
+// CLI parsers
 
 fn parse_difficulty_and_number(input: &str) -> Result<usize, String> {
     let num: usize = input.parse().unwrap();
@@ -345,5 +345,63 @@ fn parse_generation(input: &str) -> Result<usize, String> {
         Ok(num)
     } else {
         Err("Generation must be between 1 and 9".to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use dotenv::dotenv;
+    use sqlx::{migrate, PgPool};
+    use std::env;
+
+    async fn setup_test_db() -> PgPool {
+        // Init dotenv for DB
+        dotenv().ok();
+
+        let database_url = env::var("DB_URL_TEST").expect("DB_URL_TEST must be set");
+        let pool = PgPool::connect(&database_url)
+            .await
+            .expect("Failed to connect to test database");
+
+        migrate!("./migrations").run(&pool).await.unwrap();
+
+        // Empty DB
+        sqlx::query("TRUNCATE TABLE poke")
+            .execute(&pool)
+            .await
+            .expect("Failed to truncate table");
+
+        pool
+    }
+
+    fn setup_test_reqwest() -> Client {
+        ClientBuilder::new()
+            .connect_timeout(std::time::Duration::from_secs(10))
+            .build()
+            .unwrap_or_default()
+    }
+
+    #[tokio::test]
+    async fn test_catch_pokemon() {
+        let pool = setup_test_db().await;
+        let client = setup_test_reqwest();
+        let poke_name = String::from("pikachu");
+        catch_pokemon(client, &poke_name, &pool).await;
+
+        // Verify result in DB
+        let db_select = "SELECT * FROM poke WHERE poke_name=$1";
+        let row = sqlx::query(db_select)
+            .bind(&poke_name)
+            .fetch_one(&pool)
+            .await
+            .expect("Could not get the row");
+
+        // Only looking if name match (not extensive test)
+        let bdd_poke_name: String = row
+            .try_get("poke_name")
+            .expect("Could not find poke_name column value");
+
+        assert_eq!(bdd_poke_name, poke_name);
     }
 }
