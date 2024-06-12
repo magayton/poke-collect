@@ -14,7 +14,7 @@ use dotenv::dotenv;
 use reqwest::{Client, ClientBuilder};
 use serde_json::{from_value, Value};
 use sha2::{Digest, Sha256};
-use sqlx::{migrate, Pool, Postgres, Row};
+use sqlx::{migrate, postgres::PgRow, Pool, Postgres, Row};
 
 mod poke;
 mod sprite;
@@ -32,7 +32,7 @@ const GEN8: std::ops::Range<i32> = 810..905;
 const GEN9: std::ops::Range<i32> = 906..1025;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Init dotenv
     dotenv().ok();
 
@@ -43,9 +43,11 @@ async fn main() {
         .unwrap_or_default();
 
     // Setup postgres DB
-    let db_url = env::var("DB_URL").unwrap();
-    let db_pool = sqlx::postgres::PgPool::connect(&db_url).await.unwrap();
-    migrate!("./migrations").run(&db_pool).await.unwrap();
+    let db_url = env::var("DB_URL")?;
+
+    let db_pool = sqlx::postgres::PgPool::connect(&db_url).await?;
+
+    migrate!("./migrations").run(&db_pool).await?;
 
     // Setup clap CLI commands
     let cli_result: ArgMatches = command!()
@@ -99,10 +101,10 @@ async fn main() {
                 sub_matches.get_one::<String>("POKE").unwrap(),
                 &db_pool,
             )
-            .await
+            .await?;
         }
         Some(("info", sub_matches)) => {
-            info_pokemon(sub_matches.get_one::<String>("POKE").unwrap(), &db_pool).await
+            info_pokemon(sub_matches.get_one::<String>("POKE").unwrap(), &db_pool).await?;
         }
         Some(("shiny", sub_matches)) => {
             shiny_pokemon(
@@ -111,39 +113,46 @@ async fn main() {
                 *sub_matches.get_one::<usize>("NUMBER").unwrap(),
                 &db_pool,
             )
-            .await
+            .await?;
         }
         Some(("collection", sub_matches)) => {
-            collection_pokemon(sub_matches.get_one::<usize>("GEN"), &db_pool).await
+            collection_pokemon(sub_matches.get_one::<usize>("GEN"), &db_pool).await?;
         }
         Some(("multi-catch", sub_matches)) => {
             if let Some(names) = sub_matches.get_many::<String>("names") {
                 let names: Vec<String> = names.map(|name| name.to_string()).collect();
-                multi_catch_pokemon(client, names, &db_pool).await;
+                multi_catch_pokemon(client, names, &db_pool).await?;
             }
         }
         _ => unreachable!(),
     }
+
+    Ok(())
 }
 
-async fn catch_pokemon(client: Client, name: &String, db_co: &Pool<Postgres>) {
+async fn catch_pokemon(
+    client: Client,
+    name: &String,
+    db_co: &Pool<Postgres>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let rep = client
         .get(format!("{}{}", "https://pokeapi.co/api/v2/pokemon/", name))
         .send()
-        .await
-        .expect("Request failed during get");
+        .await?;
+
     if rep.status().is_success() {
-        let res: Result<Pokemon, reqwest::Error> = rep.json().await;
-        let poke = res.expect("Error while parsing json");
+        let poke: Pokemon = rep.json().await?;
         println!("{}", poke);
 
         // DB insertion
         // Transform into json stats and types directly in query
         let db_insert = "INSERT INTO poke (poke_id, poke_name, poke_type, poke_base_experience, poke_stats) VALUES ($1, $2, $3::json, $4, $5::json)";
-        // Optionnal DbPoke into
+
+        // Optionnal DbPoke into (just to use it)
         let db_poke: DbPoke = poke.into();
-        let stats_json = serde_json::to_string(&db_poke.stats).unwrap();
-        let types_json = serde_json::to_string(&db_poke.types).unwrap();
+
+        let stats_json = serde_json::to_string(&db_poke.stats)?;
+        let types_json = serde_json::to_string(&db_poke.types)?;
         sqlx::query(db_insert)
             .bind(db_poke.id)
             .bind(db_poke.name)
@@ -151,49 +160,51 @@ async fn catch_pokemon(client: Client, name: &String, db_co: &Pool<Postgres>) {
             .bind(db_poke.base_experience)
             .bind(stats_json)
             .execute(db_co)
-            .await
-            .unwrap();
+            .await?;
+        Ok(())
     } else {
-        println!("Err : {}", rep.status());
+        // Manual way to handling errors, could use anyhow or thiserror
+        Err(Box::new(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            format!("API Response error: {}", rep.status()),
+        )))
     }
 }
 
-async fn info_pokemon(name: &String, db_co: &Pool<Postgres>) {
+async fn info_pokemon(
+    name: &String,
+    db_co: &Pool<Postgres>,
+) -> Result<DbPoke, Box<dyn std::error::Error>> {
     let db_select = "SELECT * FROM poke WHERE poke_name=$1";
-    let row = sqlx::query(db_select)
-        .bind(name)
-        .fetch_one(db_co)
-        .await
-        .unwrap();
+    let row = sqlx::query(db_select).bind(name).fetch_one(db_co).await?;
 
-    let stats_value: Value = row.try_get("poke_stats").unwrap();
-    let stats: Vec<Stat> = from_value(stats_value).unwrap();
-    let types_value: Value = row.try_get("poke_type").unwrap();
-    let types: Vec<PokemonType> = from_value(types_value).unwrap();
+    let stats_value: Value = row.try_get("poke_stats")?;
+    let stats: Vec<Stat> = from_value(stats_value)?;
+    let types_value: Value = row.try_get("poke_type")?;
+    let types: Vec<PokemonType> = from_value(types_value)?;
 
     let pokemon = DbPoke {
-        id: row.try_get("poke_id").unwrap(),
-        name: row.try_get("poke_name").unwrap(),
+        id: row.try_get("poke_id")?,
+        name: row.try_get("poke_name")?,
         types,
-        base_experience: row.try_get("poke_base_experience").unwrap(),
+        base_experience: row.try_get("poke_base_experience")?,
         stats,
-        is_shiny: row.try_get("poke_is_shiny").unwrap(),
+        is_shiny: row.try_get("poke_is_shiny")?,
     };
 
     println!("{}", pokemon);
+
+    Ok(pokemon)
 }
 
-async fn shiny_pokemon(name: &String, difficulty: usize, number: usize, db_co: &Pool<Postgres>) {
+async fn shiny_pokemon(
+    name: &String,
+    difficulty: usize,
+    number: usize,
+    db_co: &Pool<Postgres>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let db_select = "SELECT * FROM poke WHERE poke_name=$1";
-    if sqlx::query(db_select)
-        .bind(name)
-        .fetch_one(db_co)
-        .await
-        .is_err()
-    {
-        println!("You need to catch a {} first", name);
-        return;
-    }
+    let poke = sqlx::query(db_select).bind(name).fetch_one(db_co).await?;
 
     let (tx_result, rx_result) = mpsc::channel();
     let mut handles = vec![];
@@ -208,7 +219,9 @@ async fn shiny_pokemon(name: &String, difficulty: usize, number: usize, db_co: &
                 let hash = generate_hash(counter);
                 if is_shiny(&hash, &difficulty, number) {
                     solution_found.store(true, Ordering::SeqCst);
-                    tx_result.send(counter).unwrap();
+                    tx_result
+                        .send(counter)
+                        .expect("Could not send result for shiny hunt");
                     return;
                 }
                 counter += 8;
@@ -223,23 +236,23 @@ async fn shiny_pokemon(name: &String, difficulty: usize, number: usize, db_co: &
 
     drop(tx_result);
 
-    if let Ok(result) = rx_result.recv() {
-        println!("J'ai trouvé le shiny avec le : {}", result);
-        for handle in handles {
-            handle.join().unwrap();
-        }
-        let db_upadte = "UPDATE poke SET poke_is_shiny=true where poke_name=$1";
-        sqlx::query(db_upadte)
-            .bind(name)
-            .execute(db_co)
-            .await
-            .unwrap();
-    } else {
-        println!("error la team");
+    let result = rx_result.recv()?;
+    println!("Shiny found with : {}", result);
+    for handle in handles {
+        handle.join().expect("Could not join thread");
     }
+    let db_upadte = "UPDATE poke SET poke_is_shiny=true where poke_name=$1";
+    sqlx::query(db_upadte).bind(name).execute(db_co).await?;
+    Ok(())
 }
 
-async fn collection_pokemon(gen: Option<&usize>, db_co: &Pool<Postgres>) {
+async fn collection_pokemon(
+    gen: Option<&usize>,
+    db_co: &Pool<Postgres>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let db_select: &str;
+    let rows: Vec<PgRow>;
+
     if let Some(gen) = gen {
         let start;
         let end = match gen {
@@ -282,36 +295,47 @@ async fn collection_pokemon(gen: Option<&usize>, db_co: &Pool<Postgres>) {
             _ => unreachable!(),
         };
 
-        let db_select = "SELECT poke_name FROM poke WHERE poke_id BETWEEN $1 AND $2";
-        let rows = sqlx::query(db_select)
+        db_select = "SELECT poke_name FROM poke WHERE poke_id BETWEEN $1 AND $2";
+        rows = sqlx::query(db_select)
             .bind(start)
             .bind(end)
             .fetch_all(db_co)
-            .await
-            .unwrap();
-        rows.iter()
-            .for_each(|row| println!("{}", row.try_get::<String, &str>("poke_name").unwrap()));
+            .await?;
     } else {
-        let db_select = "SELECT * FROM poke";
-        let rows = sqlx::query(db_select).fetch_all(db_co).await.unwrap();
-
-        rows.iter()
-            .for_each(|row| println!("{}", row.try_get::<String, &str>("poke_name").unwrap()));
+        db_select = "SELECT * FROM poke";
+        rows = sqlx::query(db_select).fetch_all(db_co).await?;
     }
+
+    for row in rows.iter() {
+        let name: String = row.try_get("poke_name")?;
+        println!("{}", name);
+    }
+
+    Ok(())
 }
 
-async fn multi_catch_pokemon(client: Client, names: Vec<String>, db_co: &Pool<Postgres>) {
+async fn multi_catch_pokemon(
+    client: Client,
+    names: Vec<String>,
+    db_co: &Pool<Postgres>,
+) -> Result<(), task::JoinError> {
     let poke = names.into_iter().map(|name| {
         let client = client.clone();
         let db_co = db_co.clone();
         task::spawn(async move {
-            catch_pokemon(client, &name, &db_co).await;
+            let res = catch_pokemon(client, &name, &db_co).await;
+            match res {
+                Ok(_) => (),
+                Err(e) => eprintln!("Error during multi catch on {}", name),
+            }
         })
     });
 
     for poke in poke {
-        poke.await.unwrap();
+        poke.await?;
     }
+
+    Ok(())
 }
 
 // Shiny imitate "blockchain mining" => Leading 0 (or other number) to find in a hash
@@ -387,7 +411,8 @@ mod tests {
         let pool = setup_test_db().await;
         let client = setup_test_reqwest();
         let poke_name = String::from("pikachu");
-        catch_pokemon(client, &poke_name, &pool).await;
+        let res = catch_pokemon(client, &poke_name, &pool).await;
+        assert!(res.is_ok());
 
         // Verify result in DB
         let db_select = "SELECT * FROM poke WHERE poke_name=$1";
